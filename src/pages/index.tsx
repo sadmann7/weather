@@ -8,7 +8,6 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 
 // external imports
-import ErrorScreen from "@/Screens/ErrorScreen";
 import { Weather } from "@/types/globals";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -58,10 +57,6 @@ const Home = () => {
     }
   );
 
-  if (weatherQuery.isError || weatherQuery.data?.cod === "404") {
-    return <ErrorScreen />;
-  }
-
   return (
     <>
       <Head>
@@ -88,8 +83,20 @@ const Home = () => {
             ) : null}
           </div>
         </form>
-        {weatherQuery.isSuccess ? (
-          <div className="flex mt-10 flex-col items-center justify-center w-full flex-1 px-20 text-center">
+        {weatherQuery.isError || weatherQuery.data?.cod === "404" ? (
+          <div className="mt-10 flex-1 text-center">
+            <h1 className="text-3xl text-white font-bold">
+              Location not found
+            </h1>
+          </div>
+        ) : !weatherQuery.data ? (
+          <div className="mt-10 flex-1 text-center">
+            <h1 className="text-3xl text-white font-bold">
+              Search for a location
+            </h1>
+          </div>
+        ) : (
+          <div className="flex mt-10 gap-1 flex-col items-center justify-center w-full flex-1 text-center">
             <h1 className="text-3xl text-white font-bold">
               {weatherQuery.data.name}
             </h1>
@@ -97,15 +104,16 @@ const Home = () => {
               {weatherQuery.data.weather[0].description}
             </h2>
             <Image src={iconURL} width={100} height={100} alt="Weather icon" />
-            <div className="grid gap-2 flex-1 px-20 text-center">
+            <div className="grid gap-2.5 flex-1 text-center">
               <h2 className="text-3xl text-white font-bold">
                 {Math.round(weatherQuery.data.main.temp)}
               </h2>
               <h3 className="text-xl text-white font-bold">
                 Feels like {Math.round(weatherQuery.data.main.feels_like)}°
               </h3>
-              <div className="flex gap-2 items-center justify-center w-full flex-1 px-20 text-center">
+              <div className="flex gap-2 items-center justify-center w-full flex-1 text-center">
                 <button
+                  aria-label="change unit to metric"
                   className={`px-4 py-2 bg-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-gray-400 text-white focus:ring-blue-500 focus:border-transparent ${
                     unit === "metric"
                       ? "border-2 border-blue-500 "
@@ -116,6 +124,7 @@ const Home = () => {
                   °C
                 </button>
                 <button
+                  aria-label="change unit to imperial"
                   className={`px-4 py-2 bg-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-gray-400 text-white focus:ring-blue-500 focus:border-transparent ${
                     unit === "imperial"
                       ? "border-2 border-blue-500 "
@@ -128,7 +137,7 @@ const Home = () => {
               </div>
             </div>
           </div>
-        ) : null}
+        )}
       </main>
     </>
   );
