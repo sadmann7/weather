@@ -20,7 +20,6 @@ const Home = () => {
   const [location, setLocation] = useState<string>();
   const [unit, setUnit] = useState<"metric" | "imperial">("metric");
   const [iconSnippet, setIconSnippet] = useState("");
-
   const iconURL = `${process.env.NEXT_PUBLIC_OPEN_WEATHER_ICON_URL}/${iconSnippet}@2x.png`;
 
   // react-hook-form
