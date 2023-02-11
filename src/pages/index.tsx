@@ -2,44 +2,65 @@ import { getWeather } from "@/utils/query";
 import { Inter } from "@next/font/google";
 import { useQuery } from "@tanstack/react-query";
 import Head from "next/head";
-import { useState } from "react";
+import Image from "next/image";
+import { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
+import { toast } from "react-toastify";
+
+// external imports
+import ErrorScreen from "@/Screens/ErrorScreen";
+import { Weather } from "@/types/globals";
 
 const inter = Inter({ subsets: ["latin"] });
 
 type Inputs = {
-  city: string;
+  location: string;
 };
 
 const Home = () => {
-  const [city, setCity] = useState("");
+  const [location, setLocation] = useState<string>();
   const [unit, setUnit] = useState<"metric" | "imperial">("metric");
   const [iconSnippet, setIconSnippet] = useState("");
 
-  const apiURL = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${process.env.OPEN_WEATHER_API_KEY}&units=${unit}`;
-  const iconURL = `http://openweathermap.org/img/wn/${iconSnippet}@2x.png`;
+  const iconURL = `${process.env.NEXT_PUBLIC_OPEN_WEATHER_ICON_URL}/${iconSnippet}@2x.png`;
 
   // react-hook-form
   const {
-    register,
     handleSubmit,
     formState: { errors },
+    register,
+    reset,
+    setFocus,
   } = useForm<Inputs>();
   const onSubmit: SubmitHandler<Inputs> = (data) => {
-    setCity(data.city);
+    setLocation(data.location);
+    reset();
   };
+  // focus input
+  useEffect(() => {
+    setFocus("location");
+  }, [setFocus]);
 
-  // fetch data using react-query
-  const weatherQuery = useQuery(["weather"], () => getWeather(city), {
-    refetchOnWindowFocus: false,
-    retry: false,
-    onSuccess: (data) => {
-      setCity(data.name);
-      // setIconSnippet(data.weather[0].icon);
-    },
-  });
+  // react-query
+  const weatherQuery = useQuery<Weather>(
+    ["weather", location, unit],
+    () => getWeather(String(location), unit),
+    {
+      enabled: !!location,
+      refetchOnWindowFocus: false,
+      onSuccess: (data) => {
+        if (data.cod === "404") return;
+        setIconSnippet(data.weather[0].icon);
+      },
+      onError: () => {
+        toast.error("Location not found");
+      },
+    }
+  );
 
-  console.log(weatherQuery);
+  if (weatherQuery.isError || weatherQuery.data?.cod === "404") {
+    return <ErrorScreen />;
+  }
 
   return (
     <>
@@ -49,14 +70,65 @@ const Home = () => {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main className="grid place-items-center min-h-screen">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <input
-            type="text"
-            placeholder="Enter city"
-            {...register("city", { required: true })}
-          />
+      <main className="max-w-xl container px-4 mx-auto pt-20">
+        <form
+          aria-label="search location form"
+          onSubmit={handleSubmit(onSubmit)}
+        >
+          <div className="grid gap-2 mx-auto">
+            <input
+              id="location"
+              type="text"
+              className="px-4 py-2 bg-transparent border border-gray-400 rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-gray-400 text-white focus:ring-blue-500 focus:border-transparent"
+              placeholder="Search location..."
+              {...register("location", { required: true })}
+            />
+            {errors.location ? (
+              <span className="text-red-500">Location is required</span>
+            ) : null}
+          </div>
         </form>
+        {weatherQuery.isSuccess ? (
+          <div className="flex mt-10 flex-col items-center justify-center w-full flex-1 px-20 text-center">
+            <h1 className="text-3xl text-white font-bold">
+              {weatherQuery.data.name}
+            </h1>
+            <h2 className="text-xl text-white font-bold">
+              {weatherQuery.data.weather[0].description}
+            </h2>
+            <Image src={iconURL} width={100} height={100} alt="Weather icon" />
+            <div className="grid gap-2 flex-1 px-20 text-center">
+              <h2 className="text-3xl text-white font-bold">
+                {Math.round(weatherQuery.data.main.temp)}
+              </h2>
+              <h3 className="text-xl text-white font-bold">
+                Feels like {Math.round(weatherQuery.data.main.feels_like)}°
+              </h3>
+              <div className="flex gap-2 items-center justify-center w-full flex-1 px-20 text-center">
+                <button
+                  className={`px-4 py-2 bg-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-gray-400 text-white focus:ring-blue-500 focus:border-transparent ${
+                    unit === "metric"
+                      ? "border-2 border-blue-500 "
+                      : "border border-gray-400 "
+                  }`}
+                  onClick={() => setUnit("metric")}
+                >
+                  °C
+                </button>
+                <button
+                  className={`px-4 py-2 bg-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-gray-400 text-white focus:ring-blue-500 focus:border-transparent ${
+                    unit === "imperial"
+                      ? "border-2 border-blue-500 "
+                      : "border border-gray-400 "
+                  }`}
+                  onClick={() => setUnit("imperial")}
+                >
+                  °F
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </main>
     </>
   );
