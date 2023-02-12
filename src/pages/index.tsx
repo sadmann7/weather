@@ -47,11 +47,12 @@ const Home = () => {
       enabled: !!location,
       refetchOnWindowFocus: false,
       onSuccess: (data) => {
-        if (data.cod === "404") return;
+        if (data.cod === "404") return toast.error("Location not found");
         setIconSnippet(data.weather[0].icon);
+        toast.success("Location found successfully");
       },
       onError: () => {
-        toast.error("Location not found");
+        toast.error("Something went wrong");
       },
     }
   );
